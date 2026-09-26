@@ -2,6 +2,8 @@
 Tambem roda uma vez ao subir, se RODAR_AO_SUBIR=1 (padrao 1) — a banda/estado impede giro repetido."""
 import os, time, subprocess, sys
 from datetime import datetime, timezone, timedelta
+import painel
+painel.iniciar_em_segundo_plano()  # painel web na porta 3000
 
 HORA = int(os.getenv("HORA_UTC", "0"))
 MINUTO = int(os.getenv("MINUTO_UTC", "5"))
