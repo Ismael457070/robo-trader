@@ -310,6 +310,12 @@ def main():
         saldos = {b["asset"]: float(b["free"]) for b in conta["balances"]}
         patrimonio = saldos.get(MOEDA_CAIXA, 0.0) + sum(saldos.get(s.replace(MOEDA_CAIXA, ""), 0.0) * precos[s] for s in alvo.index)
 
+    try:
+        import sombra
+        sombra.atualizar(ohlc, PASTA_ESTADO, str(ultimo_dia), log.info)
+    except Exception as e:
+        log.warning(f"carteiras virtuais falharam: {e}")
+
     gravar_pesos_atuais(alvo)
     registrar_diario({"data": str(hoje.date()), "candle": str(ultimo_dia), "modo": MODO, "patrimonio": patrimonio,
                       "exposicao": float(alvo.sum()), "n_ativas": extra["n_ativas"],

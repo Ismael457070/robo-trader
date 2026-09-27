@@ -46,6 +46,51 @@ def dados():
     return d, pesos, log
 
 
+CORES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7"]
+CORES_ESC = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9"]
+VARS_CLARO = "".join(f"--c{i}:{c};" for i, c in enumerate(CORES))
+VARS_ESCURO = "".join(f"--c{i}:{c};" for i, c in enumerate(CORES_ESC))
+BACKTEST = {  # 2018-2026, 12 moedas, custos inclusos, filtro BTC 150d (fonte: laboratorio/rodar_setups*.py)
+    "Raghee — onda 34 + relógio": "Sharpe 1,55 · CAGR 40% · queda −26%",
+    "Raghee — swing na onda": "Sharpe 1,17 · CAGR 30% · queda −28%",
+    "Donchian 55/20": "Sharpe 1,33 · CAGR 38% · queda −30%",
+    "Raschke — Holy Grail": "Sharpe 0,90 · CAGR 23% · queda −49%",
+    "Raschke — 80-20": "Sharpe 0,83 · CAGR 22% · queda −44%",
+    "Raschke — Anti": "Sharpe 0,67 · CAGR 12% · queda −41%",
+    "BTC comprado e parado (régua)": "Sharpe 0,65 · CAGR 23% · queda −81%",
+}
+
+
+def bloco_sombra():
+    arq = os.path.join(PASTA, "sombra.csv")
+    if not os.path.exists(arq):
+        return "<div class=card style='margin-bottom:16px'><h2>Corrida de estratégias</h2><p class=sub>Começa na próxima execução do robô.</p></div>"
+    d = pd.read_csv(arq).drop_duplicates(["data", "estrategia"], keep="last")
+    nomes = list(dict.fromkeys(d.estrategia))
+    piv = d.pivot(index="data", columns="estrategia", values="patrimonio").ffill()
+    ult = piv.iloc[-1].sort_values(ascending=False)
+    W, H = 720, 240; lo, hi = piv.min().min(), piv.max().max()
+    if hi == lo: hi = lo + 1
+    linhas = ""; leg = ""
+    for i, n in enumerate(nomes):
+        cor = f"var(--c{i})"
+        if len(piv) >= 2:
+            pts = " L".join(f"{20 + j*(W-40)/(len(piv)-1):.1f},{H-20-(v-lo)*(H-40)/(hi-lo):.1f}" for j, v in enumerate(piv[n].values))
+            linhas += f'<path d="M{pts}" fill="none" stroke="{cor}" stroke-width="2" stroke-linejoin="round"><title>{n}</title></path>'
+    rank = ""
+    for pos, (n, v) in enumerate(ult.items(), 1):
+        i = nomes.index(n); ex = d[d.estrategia == n].iloc[-1]
+        rank += (f"<tr><td>{pos}º</td><td><span class=dot style='background:var(--c{i})'></span>{n}</td>"
+                 f"<td class=num>{(v/100000-1)*100:+.2f}%</td><td class=num>{ex.exposicao*100:.0f}%</td>"
+                 f"<td class=num>{int(ex.moedas)}</td><td class=sub>{BACKTEST.get(n,'')}</td></tr>")
+    graf = (f'<svg viewBox="0 0 {W} {H}" width="100%" preserveAspectRatio="none" style="height:240px">'
+            f'<line x1=20 y1={H-20} x2={W-20} y2={H-20} stroke="var(--linha)"/>{linhas}</svg>') if len(piv) >= 2 else \
+           "<p class=sub>A curva aparece a partir do 2º dia.</p>"
+    return (f"<div class=card style='margin-bottom:16px'><h2>Corrida de estratégias (carteiras virtuais, base 100.000)</h2>{graf}"
+            f"<table><tr><th>#</th><th>Estratégia</th><th class=num>Resultado</th><th class=num>Exposição</th><th class=num>Moedas</th><th>Backtest 2018–26</th></tr>{rank}</table>"
+            f"<p class=sub>Só a estratégia ativa (Raghee) envia ordens. As demais são simuladas com os mesmos preços e custo de 0,08% por giro.</p></div>")
+
+
 def html():
     d, pesos, log = dados()
     if len(d):
@@ -81,8 +126,9 @@ def html():
     return f"""<!doctype html><html lang=pt-BR><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
 <title>Robô Trader</title>
 <style>
-:root{{--bg:#fcfcfb;--card:#fff;--tx:#0b0b0b;--tx2:#52514e;--linha:#e6e5e1;--s1:#2a78d6}}
-@media(prefers-color-scheme:dark){{:root{{--bg:#1a1a19;--card:#242422;--tx:#fff;--tx2:#c3c2b7;--linha:#383835;--s1:#3987e5}}}}
+:root{{--bg:#fcfcfb;--card:#fff;--tx:#0b0b0b;--tx2:#52514e;--linha:#e6e5e1;--s1:#2a78d6;{VARS_CLARO}}}
+@media(prefers-color-scheme:dark){{:root{{--bg:#1a1a19;--card:#242422;--tx:#fff;--tx2:#c3c2b7;--linha:#383835;--s1:#3987e5;{VARS_ESCURO}}}}}
+.dot{{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:middle}}
 body{{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,Segoe UI,Roboto,sans-serif}}
 main{{max-width:960px;margin:0 auto;padding:16px}}
 h1{{font-size:20px;margin:8px 0 16px}} h2{{font-size:15px;color:var(--tx2);font-weight:600;margin:0 0 8px}}
@@ -107,6 +153,7 @@ svg text{{fill:var(--tx2);font-size:11px}}
 {f'<path d="{path}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>' if path else f'<text x="{W/2}" y="{H/2}" text-anchor="middle">Ainda sem dias suficientes (a curva aparece a partir do 2º dia)</text>'}
 {f'<text x=20 y={H-4}>{serie[0][0]}</text><text x={W-20} y={H-4} text-anchor="end">{serie[-1][0]}</text>' if serie else ''}
 </svg></div>
+{bloco_sombra()}
 <div class=grid style="grid-template-columns:1fr 1fr">
  <div class=card><h2>Posições atuais</h2><table><tr><th>Moeda</th><th class=num>Peso</th><th class=num>Preço agora</th></tr>{linhas_pos or '<tr><td colspan=3>100% em caixa</td></tr>'}</table></div>
  <div class=card><h2>Últimas ordens</h2><table><tr><th>Dia</th><th>Lado</th><th>Moeda</th><th class=num>{MOEDA}</th></tr>{linhas_ord or '<tr><td colspan=4>Nenhuma ainda</td></tr>'}</table></div>
