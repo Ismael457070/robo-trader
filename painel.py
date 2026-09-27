@@ -113,7 +113,7 @@ svg text{{fill:var(--tx2);font-size:11px}}
 </div>
 <div class=card style="margin:16px 0"><h2>Dia a dia (últimos 31)</h2><table><tr><th>Dia</th><th class=num>Patrimônio</th><th class=num>Exposição</th><th class=num>Moedas c/ sinal</th><th>Ordens</th></tr>{linhas_dia}</table></div>
 <div class=card><h2>Log do robô (fim)</h2><pre>{log.replace('<','&lt;')}</pre></div>
-<p class=sub>Estratégia: rompimento Donchian 55/20 dias, só comprado, filtro BTC &gt; média 150d, alvo de volatilidade 35%, sem alavancagem. Roda 1×/dia às 00:05 UTC. Backtest não é garantia de resultado.</p>
+<p class=sub>Estratégia: Onda 34 EMA de Raghee Horner (relógio ≥ 0,17) + rompimento de 10 dias, só comprado, filtro BTC &gt; média 150d, alvo de volatilidade 35%, sem alavancagem. Roda 1×/dia às 00:05 UTC. Backtest não é garantia de resultado.</p>
 </main></body></html>"""
 
 

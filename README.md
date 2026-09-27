@@ -1,8 +1,19 @@
 # Robô de tendência — cripto spot (Binance)
 
-Estratégia validada em backtest 2018–2026 (ver pasta `laboratorio/`): rompimento de máxima de 55 dias,
-saída na mínima de 20 dias, só comprado, só quando o BTC está acima da média de 150 dias,
-tamanho por volatilidade (alvo 35% a.a.), sem alavancagem. Roda **uma vez por dia** às 00:05 UTC.
+Estratégia validada em backtest 2018–2026 (ver pasta `laboratorio/`), em candles diários, só comprado, sem alavancagem:
+
+**Sinal padrão — Raghee Horner (`SINAL=raghee`)**: Onda de três EMAs de 34 (máxima, fechamento, mínima).
+O "relógio" é a inclinação da EMA do fechamento em 5 dias, medida em ATRs por dia; acima de `ANG_MIN` (0,17)
+equivale à onda apontando para "12 às 2 horas". Entra quando a onda aponta para cima, o fechamento está acima
+da onda e rompe a máxima de 10 dias; sai ao fechar abaixo da EMA da mínima ou se a onda virar para baixo.
+Backtest 2018–26 (12 moedas, custos incluídos): CAGR ~40%, Sharpe 1,55, queda máxima −26%; fora da amostra
+(2023–26) Sharpe 1,25. Platô de robustez: `ANG_MIN` entre 0,15 e 0,20; acima de 0,22 degrada.
+
+**Sinal alternativo — Donchian (`SINAL=donchian`)**: rompimento de máxima de 55 dias, saída na mínima de 20.
+
+Em ambos: filtro de regime (só opera com BTC acima da média de 150 dias), peso igual entre as moedas com sinal,
+escala pela volatilidade (alvo 35% a.a., teto 100%), banda de rebalanceamento de 10%. Roda **uma vez por dia** às 00:05 UTC.
+Painel web em `painel.py` (porta 3000, senha em `SENHA_PAINEL`).
 
 ## Arquivos
 - `robo.py` — o robô (cálculo dos pesos + ordens). Idêntico ao backtest (validado dia a dia, diferença zero).

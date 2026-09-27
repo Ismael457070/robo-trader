@@ -28,6 +28,9 @@ except ImportError:  # modo simulacao nao precisa
 MODO = os.getenv("MODO", "simulacao")
 SIMBOLOS = os.getenv("SIMBOLOS", "BTCUSDT,ETHUSDT,BNBUSDT,XRPUSDT,ADAUSDT,SOLUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,AVAXUSDT,DOTUSDT,TRXUSDT").split(",")
 MOEDA_CAIXA = os.getenv("MOEDA_CAIXA", "USDT")
+SINAL = os.getenv("SINAL", "raghee")  # raghee (onda 34 EMA + relogio) | donchian
+ANG_MIN = float(os.getenv("ANG_MIN", "0.17"))
+ROMPE = int(os.getenv("ROMPE", "10"))
 N = int(os.getenv("N", "55"))
 SAIDA = int(os.getenv("SAIDA", "20"))
 FILTRO_BTC = int(os.getenv("FILTRO_BTC", "150"))
@@ -95,11 +98,11 @@ class Binance:
         df = pd.DataFrame(k).iloc[:, :7]
         df.columns = ["open_time", "open", "high", "low", "close", "volume", "close_time"]
         df["ts"] = pd.to_datetime(df.open_time, unit="ms", utc=True)
-        df = df.set_index("ts")[["close", "close_time"]].astype(float)
+        df = df.set_index("ts")[["open", "high", "low", "close", "close_time"]].astype(float)
         # descarta o candle do dia em curso (ainda nao fechou)
         agora = int(time.time() * 1000) + self.desvio
         df = df[df.close_time < agora]
-        return df.close
+        return df[["open", "high", "low", "close"]]
 
 
 # ---------------- estrategia (identica ao backtest) ----------------
@@ -119,11 +122,39 @@ def sinal_donchian(serie, n, saida):
     return pd.Series(out, index=serie.index)
 
 
-def pesos_alvo(fechamentos: pd.DataFrame):
+def _atr(d, n=14):
+    tr = pd.concat([d.high - d.low, (d.high - d.close.shift()).abs(), (d.low - d.close.shift()).abs()], axis=1).max(axis=1)
+    return tr.ewm(alpha=1 / n, adjust=False).mean()
+
+
+def sinal_raghee(d, ang_min=None, rompe=None):
+    """Raghee Horner: onda de 3 EMAs de 34 (maxima, fechamento, minima). 'Relogio' = inclinacao da EMA do
+    fechamento em 5 dias, em ATRs por dia; > ang_min equivale a '12 as 2 horas'. Entra quando a onda aponta
+    para cima, o fechamento esta acima da onda e rompe a maxima de `rompe` dias; sai ao fechar abaixo da
+    EMA da minima ou se a onda virar para baixo."""
+    ang_min = ANG_MIN if ang_min is None else ang_min; rompe = ROMPE if rompe is None else rompe
+    hi = d.high.ewm(span=34, adjust=False).mean(); mid = d.close.ewm(span=34, adjust=False).mean(); lo = d.low.ewm(span=34, adjust=False).mean()
+    ang = (mid - mid.shift(5)) / (5 * _atr(d))
+    entrar = ((ang > ang_min) & (d.close > hi) & (d.close > d.high.rolling(rompe).max().shift(1))).fillna(False).values
+    sair = ((d.close < lo) | (ang < -ang_min)).fillna(False).values
+    p = 0.0; out = np.zeros(len(d))
+    for i in range(len(d)):
+        if p == 0 and entrar[i]:
+            p = 1.0
+        elif p == 1 and sair[i]:
+            p = 0.0
+        out[i] = p
+    return pd.Series(out, index=d.index)
+
+
+def pesos_alvo(fechamentos: pd.DataFrame, ohlc: dict = None):
     """fechamentos: DataFrame diario (colunas = simbolos), ultimo dia = ultimo candle FECHADO.
     Devolve o peso-alvo bruto de cada moeda para o proximo dia (antes da banda)."""
     ret = fechamentos.pct_change()
-    sinal = pd.DataFrame({c: sinal_donchian(fechamentos[c], N, SAIDA) for c in fechamentos.columns})
+    if SINAL == "raghee":
+        sinal = pd.DataFrame({c: sinal_raghee(ohlc[c]) for c in fechamentos.columns}).reindex(fechamentos.index).fillna(0.0)
+    else:
+        sinal = pd.DataFrame({c: sinal_donchian(fechamentos[c], N, SAIDA) for c in fechamentos.columns})
     sinal = sinal.where(fechamentos.notna(), 0.0)
     if FILTRO_BTC:
         btc = fechamentos["BTCUSDT"]
@@ -228,30 +259,36 @@ def executar_na_binance(alvo_pesos: pd.Series, precos: dict):
 
 def main():
     hoje = datetime.now(timezone.utc)
-    log.info(f"=== robo iniciado | modo={MODO} | N={N} saida={SAIDA} filtro={FILTRO_BTC} vol_alvo={VOL_ALVO} ===")
+    log.info(f"=== robo iniciado | modo={MODO} | sinal={SINAL} ang_min={ANG_MIN} rompe={ROMPE} | N={N} saida={SAIDA} filtro={FILTRO_BTC} vol_alvo={VOL_ALVO} ===")
 
     if MODO == "simulacao":
         df = pd.read_csv(CSV_SIMULACAO)
         df["ts"] = pd.to_datetime(df.open_time, unit="ms", utc=True)
-        piv = df.pivot_table(index="ts", columns="symbol", values="close").ffill()
-        diario = piv.resample("1D").last()
-        if DATA_SIMULACAO:
-            diario = diario[diario.index <= pd.Timestamp(DATA_SIMULACAO, tz="UTC")]
-        fech = diario[[s for s in SIMBOLOS if s in diario.columns]].tail(max(N, FILTRO_BTC, VOL_DIAS) + 50)
+        ohlc = {}
+        for s in SIMBOLOS:
+            x = df[df.symbol == s].set_index("ts").sort_index()
+            d = x.resample("1D").agg(open=("open", "first"), high=("high", "max"), low=("low", "min"), close=("close", "last")).dropna()
+            if DATA_SIMULACAO:
+                d = d[d.index <= pd.Timestamp(DATA_SIMULACAO, tz="UTC")]
+            if len(d):
+                ohlc[s] = d
+        fech = pd.DataFrame({s: ohlc[s].close for s in ohlc}).ffill().tail(max(N, FILTRO_BTC, VOL_DIAS) + 50)
+        ohlc = {s: ohlc[s].reindex(fech.index) for s in ohlc}
     else:
         if not API_KEY or not API_SECRET:
             log.error("faltam BINANCE_API_KEY / BINANCE_API_SECRET"); sys.exit(2)
         dados = Binance(DADOS_URL)
-        series = {}
+        ohlc = {}
         for s in SIMBOLOS:
             try:
-                series[s] = dados.klines_diarios(s, max(N, FILTRO_BTC, VOL_DIAS) + 60)
+                ohlc[s] = dados.klines_diarios(s, max(N, FILTRO_BTC, VOL_DIAS) + 60)
             except Exception as e:
                 log.warning(f"sem dados para {s}: {e}")
-        fech = pd.DataFrame(series).ffill()
+        fech = pd.DataFrame({s: ohlc[s].close for s in ohlc}).ffill()
+        ohlc = {s: ohlc[s].reindex(fech.index) for s in ohlc}
 
     ultimo_dia = fech.index[-1].date()
-    alvo_bruto, extra = pesos_alvo(fech)
+    alvo_bruto, extra = pesos_alvo(fech, ohlc)
     atual = ler_pesos_atuais().reindex(alvo_bruto.index).fillna(0.0)
     alvo = aplicar_banda(alvo_bruto, atual)
     precos = fech.iloc[-1].to_dict()
