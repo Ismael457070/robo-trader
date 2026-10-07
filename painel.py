@@ -4,9 +4,12 @@ import os, json, base64, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.request import urlopen, Request
 import pandas as pd
+import numpy as np
 
 PASTA = os.getenv("PASTA_ESTADO", "/app/estado")
 SENHA = os.getenv("SENHA_PAINEL", "")
+import hashlib
+FICHA = hashlib.sha256(("robo-painel:" + SENHA).encode()).hexdigest()[:32]  # cookie derivado da senha; trocar a senha invalida os acessos
 MODO = os.getenv("MODO", "teste")
 MOEDA = os.getenv("MOEDA_CAIXA", "USDT")
 DADOS_URL = "https://api.binance.com"
@@ -91,6 +94,41 @@ def bloco_sombra():
             f"<p class=sub>Só a estratégia ativa (Raghee) envia ordens. As demais são simuladas com os mesmos preços e custo de 0,08% por giro.</p></div>")
 
 
+def _metricas(serie):
+    r = serie.pct_change().dropna(); anos = len(r) / 365
+    cagr = (serie.iloc[-1] / serie.iloc[0]) ** (1 / anos) - 1 if anos > 0 else 0
+    dd = (serie / serie.cummax() - 1).min()
+    sh = r.mean() / r.std() * np.sqrt(365) if r.std() > 0 else 0
+    return cagr, dd, sh
+
+
+def bloco_historico():
+    arq = os.path.join(PASTA, "sombra_hist.csv")
+    if not os.path.exists(arq):
+        return ""
+    d = pd.read_csv(arq)
+    piv = d.pivot(index="data", columns="estrategia", values="patrimonio").ffill()
+    nomes = list(dict.fromkeys(d.estrategia))
+    W, H = 720, 260; lo, hi = np.log(piv.min().min()), np.log(piv.max().max())
+    linhas = ""
+    for i, n in enumerate(nomes):
+        v = np.log(piv[n].values); passo = max(1, len(v) // 360)
+        pts = " L".join(f"{20 + j*(W-40)/(len(v)-1):.1f},{H-20-(v[j]-lo)*(H-40)/(hi-lo):.1f}" for j in range(0, len(v), passo))
+        linhas += f'<path d="M{pts}" fill="none" stroke="var(--c{i})" stroke-width="2" stroke-linejoin="round"><title>{n}</title></path>'
+    base_y = H - 20 - (np.log(100000) - lo) * (H - 40) / (hi - lo)
+    rank = ""
+    for pos, n in enumerate(piv.iloc[-1].sort_values(ascending=False).index, 1):
+        i = nomes.index(n); c, dd, sh = _metricas(piv[n])
+        rank += (f"<tr><td>{pos}º</td><td><span class=dot style='background:var(--c{i})'></span>{n}</td>"
+                 f"<td class=num>{(piv[n].iloc[-1]/100000-1)*100:+.0f}%</td><td class=num>{c*100:+.0f}%</td>"
+                 f"<td class=num>{dd*100:.0f}%</td><td class=num>{sh:.2f}</td></tr>")
+    return (f"<div class=card style='margin-bottom:16px'><h2>Histórico das estratégias — {piv.index[0]} a {piv.index[-1]} ({len(piv)} dias, base 100.000)</h2>"
+            f'<svg viewBox="0 0 {W} {H}" width="100%" preserveAspectRatio="none" style="height:260px">'
+            f'<line x1=20 y1={base_y:.1f} x2={W-20} y2={base_y:.1f} stroke="var(--linha)" stroke-dasharray="4 4"/>{linhas}</svg>'
+            f"<table><tr><th>#</th><th>Estratégia</th><th class=num>Total</th><th class=num>Ao ano</th><th class=num>Pior queda</th><th class=num>Sharpe</th></tr>{rank}</table>"
+            f"<p class=sub>Simulação diária com preços reais da Binance, mesmas regras e custo de 0,08% por giro; escala logarítmica (linha tracejada = 100.000). Recalculado todo dia junto com o robô.</p></div>")
+
+
 def html():
     d, pesos, log = dados()
     if len(d):
@@ -153,6 +191,7 @@ svg text{{fill:var(--tx2);font-size:11px}}
 {f'<path d="{path}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>' if path else f'<text x="{W/2}" y="{H/2}" text-anchor="middle">Ainda sem dias suficientes (a curva aparece a partir do 2º dia)</text>'}
 {f'<text x=20 y={H-4}>{serie[0][0]}</text><text x={W-20} y={H-4} text-anchor="end">{serie[-1][0]}</text>' if serie else ''}
 </svg></div>
+{bloco_historico()}
 {bloco_sombra()}
 <div class=grid style="grid-template-columns:1fr 1fr">
  <div class=card><h2>Posições atuais</h2><table><tr><th>Moeda</th><th class=num>Peso</th><th class=num>Preço agora</th></tr>{linhas_pos or '<tr><td colspan=3>100% em caixa</td></tr>'}</table></div>
@@ -168,19 +207,38 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, *a):  # silencia
         pass
 
+    def _cookie_ok(self):
+        if not SENHA:
+            return True
+        c = self.headers.get("Cookie", "")
+        return f"robo={FICHA}" in c
+
+    def _form(self, erro=""):
+        corpo = (f"<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
+                 f"<title>Robô Trader — entrar</title><body style='font:16px system-ui;max-width:340px;margin:80px auto;padding:16px'>"
+                 f"<h2>Robô Trader</h2><form method=post action=/entrar><input type=password name=senha placeholder=Senha autofocus "
+                 f"style='width:100%;padding:10px;font-size:16px;box-sizing:border-box'><button style='margin-top:12px;padding:10px 16px;font-size:16px'>Entrar</button>"
+                 f"<p style='color:#d03b3b'>{erro}</p></form><p style='color:#777;font-size:13px'>Fica lembrado neste navegador por 1 ano.</p></body>").encode()
+        self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.end_headers(); self.wfile.write(corpo)
+
+    def do_POST(self):
+        if self.path != "/entrar":
+            self.send_response(404); self.end_headers(); return
+        n = int(self.headers.get("Content-Length", "0") or 0)
+        from urllib.parse import parse_qs
+        senha = parse_qs(self.rfile.read(n).decode()).get("senha", [""])[0]
+        if senha == SENHA:
+            self.send_response(303); self.send_header("Location", "/")
+            self.send_header("Set-Cookie", f"robo={FICHA}; Max-Age=31536000; Path=/; HttpOnly; SameSite=Lax")
+            self.end_headers()
+        else:
+            self._form("Senha incorreta")
+
     def do_GET(self):
         if self.path == "/health":
             self.send_response(200); self.end_headers(); self.wfile.write(b"ok"); return
-        if SENHA:
-            auth = self.headers.get("Authorization", "")
-            ok = False
-            if auth.startswith("Basic "):
-                try:
-                    ok = base64.b64decode(auth[6:]).decode().split(":", 1)[1] == SENHA
-                except Exception:
-                    ok = False
-            if not ok:
-                self.send_response(401); self.send_header("WWW-Authenticate", 'Basic realm="robo"'); self.end_headers(); return
+        if not self._cookie_ok():
+            self._form(); return
         try:
             corpo = html().encode()
         except Exception as e:

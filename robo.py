@@ -313,6 +313,17 @@ def main():
     try:
         import sombra
         sombra.atualizar(ohlc, PASTA_ESTADO, str(ultimo_dia), log.info)
+        if MODO == "simulacao":
+            longo = {s: ohlc_full[s] for s in ohlc_full} if "ohlc_full" in globals() else ohlc
+        else:
+            longo = {}
+            for s in SIMBOLOS:
+                try:
+                    longo[s] = dados.klines_diarios(s, 1000)
+                except Exception as e:
+                    log.warning(f"historico sem {s}: {e}")
+            f = pd.DataFrame({s: longo[s].close for s in longo}).ffill(); longo = {s: longo[s].reindex(f.index) for s in longo}
+        sombra.historico(longo, PASTA_ESTADO, log=log.info)
     except Exception as e:
         log.warning(f"carteiras virtuais falharam: {e}")
 

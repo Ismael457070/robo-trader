@@ -136,3 +136,37 @@ def atualizar(ohlc: dict, pasta: str, dia: str, log=print):
                  ).to_csv(hist, mode="a", header=not os.path.exists(hist), index=False)
     for n, e in linhas:
         log(f"sombra | {n}: {e['patrimonio']:,.0f} | exposicao {sum(e['pesos'].values()):.0%} | {len(e['pesos'])} moedas")
+
+
+def historico(ohlc: dict, pasta: str, filtro_dias=150, vol_alvo=0.35, banda=0.10, log=print):
+    """Backtest diario de todas as estrategias sobre o historico disponivel (~1000 dias da Binance),
+    mesmas regras da carteira ao vivo. Grava sombra_hist.csv (data, estrategia, patrimonio)."""
+    fech = pd.DataFrame({s: ohlc[s].close for s in ohlc}).ffill()
+    ret = fech.pct_change().fillna(0.0)
+    vol = fech.pct_change().rolling(30).std() * np.sqrt(365)
+    btc = fech["BTCUSDT"]; reg = (btc > btc.rolling(filtro_dias).mean()).astype(float)
+    todas = dict(ESTRATEGIAS); todas["BTC comprado e parado (régua)"] = (None, False)
+    saida = []
+    for nome, (fn, filtro) in todas.items():
+        if fn is None:
+            w = pd.DataFrame(0.0, index=fech.index, columns=fech.columns); w["BTCUSDT"] = 1.0
+        else:
+            sinal = pd.DataFrame({s: fn(ohlc[s]) for s in ohlc}).reindex(fech.index).fillna(0.0)
+            if filtro: sinal = sinal.mul(reg, axis=0)
+            n = sinal.sum(axis=1).replace(0, np.nan)
+            w = sinal.div(n, axis=0).fillna(0.0)
+            esc = (vol_alvo / ((w * vol).sum(axis=1) * 0.8)).clip(upper=1.0).fillna(0.0)
+            w = w.mul(esc, axis=0)
+            vals = w.values; out = np.zeros_like(vals); prev = np.zeros(vals.shape[1])
+            for i in range(len(vals)):
+                cur = vals[i]; mud = np.abs(cur - prev) > banda * np.maximum(prev, 0.02); zer = (cur == 0) & (prev != 0)
+                prev = np.where(mud | zer, cur, prev); out[i] = prev
+            w = pd.DataFrame(out, index=fech.index, columns=fech.columns)
+        pos = w.shift(1).fillna(0.0)  # peso decidido no fechamento vale a partir do dia seguinte
+        r = (pos * ret).sum(axis=1) - pos.diff().abs().fillna(pos.abs()).sum(axis=1) * CUSTO
+        r = r.iloc[filtro_dias:]  # descarta o aquecimento dos indicadores
+        eq = BASE * (1 + r).cumprod()
+        saida.append(pd.DataFrame({"data": [str(x.date()) for x in eq.index], "estrategia": nome, "patrimonio": eq.round(2).values}))
+    df = pd.concat(saida)
+    df.to_csv(os.path.join(pasta, "sombra_hist.csv"), index=False)
+    log(f"historico das estrategias: {df.data.min()} a {df.data.max()} ({df.data.nunique()} dias)")
