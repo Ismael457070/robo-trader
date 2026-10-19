@@ -1,0 +1,333 @@
+{
+  "nota": "Reconstruido a partir de robo.py e sombra.py. O laboratorio original (2018-2026) nao estava no Git.",
+  "custo_por_giro": 0.0008,
+  "base": 100000.0,
+  "filtro_btc_dias": 150,
+  "vol_alvo": 0.35,
+  "banda": 0.1,
+  "moedas": [
+    "ADAUSDT",
+    "AVAXUSDT",
+    "BNBUSDT",
+    "BTCUSDT",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "ETHUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "XRPUSDT"
+  ],
+  "estrategias": [
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 2216797.65,
+      "cagr": 0.4256,
+      "queda_maxima": -0.2177,
+      "sharpe": 1.5193,
+      "estrategia": "Raghee — onda 34 + relógio",
+      "fora_da_amostra_2023": {
+        "inicio": "2023-01-01",
+        "fim": "2026-10-18",
+        "dias": 1387,
+        "patrimonio_final": 2216797.65,
+        "cagr": 0.3454,
+        "queda_maxima": -0.2177,
+        "sharpe": 1.279
+      }
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 1214443.57,
+      "cagr": 0.3311,
+      "queda_maxima": -0.2338,
+      "sharpe": 1.1481,
+      "estrategia": "Raghee — swing na onda",
+      "fora_da_amostra_2023": {
+        "inicio": "2023-01-01",
+        "fim": "2026-10-18",
+        "dias": 1387,
+        "patrimonio_final": 1214443.57,
+        "cagr": 0.2797,
+        "queda_maxima": -0.2035,
+        "sharpe": 0.9975
+      }
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 1678959.01,
+      "cagr": 0.3811,
+      "queda_maxima": -0.2847,
+      "sharpe": 1.3641,
+      "estrategia": "Donchian 55/20",
+      "fora_da_amostra_2023": {
+        "inicio": "2023-01-01",
+        "fim": "2026-10-18",
+        "dias": 1387,
+        "patrimonio_final": 1678959.01,
+        "cagr": 0.2641,
+        "queda_maxima": -0.2847,
+        "sharpe": 0.9491
+      }
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 527940.72,
+      "cagr": 0.211,
+      "queda_maxima": -0.4607,
+      "sharpe": 0.8417,
+      "estrategia": "Raschke — Holy Grail",
+      "fora_da_amostra_2023": {
+        "inicio": "2023-01-01",
+        "fim": "2026-10-18",
+        "dias": 1387,
+        "patrimonio_final": 527940.72,
+        "cagr": 0.198,
+        "queda_maxima": -0.3686,
+        "sharpe": 0.8071
+      }
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 631714.28,
+      "cagr": 0.238,
+      "queda_maxima": -0.3886,
+      "sharpe": 0.9159,
+      "estrategia": "Raschke — 80-20",
+      "fora_da_amostra_2023": {
+        "inicio": "2023-01-01",
+        "fim": "2026-10-18",
+        "dias": 1387,
+        "patrimonio_final": 631714.28,
+        "cagr": 0.1253,
+        "queda_maxima": -0.3397,
+        "sharpe": 0.5496
+      }
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 295049.28,
+      "cagr": 0.1314,
+      "queda_maxima": -0.3568,
+      "sharpe": 0.6998,
+      "estrategia": "Raschke — Anti",
+      "fora_da_amostra_2023": {
+        "inicio": "2023-01-01",
+        "fim": "2026-10-18",
+        "dias": 1387,
+        "patrimonio_final": 295049.28,
+        "cagr": 0.1834,
+        "queda_maxima": -0.2251,
+        "sharpe": 0.9041
+      }
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 577874.74,
+      "cagr": 0.229,
+      "queda_maxima": -0.7663,
+      "sharpe": 0.6472,
+      "estrategia": "BTC comprado e parado (régua)",
+      "fora_da_amostra_2023": {
+        "inicio": "2023-01-01",
+        "fim": "2026-10-18",
+        "dias": 1387,
+        "patrimonio_final": 577874.74,
+        "cagr": 0.5231,
+        "queda_maxima": -0.5297,
+        "sharpe": 1.1396
+      }
+    }
+  ],
+  "plato_ang_min": [
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 1298904.16,
+      "cagr": 0.3412,
+      "queda_maxima": -0.3668,
+      "sharpe": 1.231,
+      "ang_min": 0.1
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 1107181.94,
+      "cagr": 0.317,
+      "queda_maxima": -0.4202,
+      "sharpe": 1.1728,
+      "ang_min": 0.11
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 1345990.91,
+      "cagr": 0.3467,
+      "queda_maxima": -0.4256,
+      "sharpe": 1.256,
+      "ang_min": 0.12
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 1652791.38,
+      "cagr": 0.3786,
+      "queda_maxima": -0.351,
+      "sharpe": 1.3632,
+      "ang_min": 0.13
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 2308027.2,
+      "cagr": 0.4321,
+      "queda_maxima": -0.2442,
+      "sharpe": 1.5305,
+      "ang_min": 0.14
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 2389332.17,
+      "cagr": 0.4378,
+      "queda_maxima": -0.2372,
+      "sharpe": 1.5472,
+      "ang_min": 0.15
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 1782244.25,
+      "cagr": 0.3905,
+      "queda_maxima": -0.2177,
+      "sharpe": 1.4556,
+      "ang_min": 0.16
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 2216797.65,
+      "cagr": 0.4256,
+      "queda_maxima": -0.2177,
+      "sharpe": 1.5193,
+      "ang_min": 0.17
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 1452374.57,
+      "cagr": 0.3586,
+      "queda_maxima": -0.19,
+      "sharpe": 1.3915,
+      "ang_min": 0.18
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 1321193.4,
+      "cagr": 0.344,
+      "queda_maxima": -0.19,
+      "sharpe": 1.3368,
+      "ang_min": 0.19
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 1271553.03,
+      "cagr": 0.3366,
+      "queda_maxima": -0.1908,
+      "sharpe": 1.3585,
+      "ang_min": 0.2
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 1485498.46,
+      "cagr": 0.3605,
+      "queda_maxima": -0.1941,
+      "sharpe": 1.3939,
+      "ang_min": 0.21
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 852017.48,
+      "cagr": 0.2769,
+      "queda_maxima": -0.2517,
+      "sharpe": 1.177,
+      "ang_min": 0.22
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 401331.64,
+      "cagr": 0.1718,
+      "queda_maxima": -0.2429,
+      "sharpe": 0.8499,
+      "ang_min": 0.23
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 437554.28,
+      "cagr": 0.1834,
+      "queda_maxima": -0.253,
+      "sharpe": 0.9135,
+      "ang_min": 0.24
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 387406.1,
+      "cagr": 0.1671,
+      "queda_maxima": -0.2135,
+      "sharpe": 0.8908,
+      "ang_min": 0.25
+    },
+    {
+      "inicio": "2018-01-14",
+      "fim": "2026-10-18",
+      "dias": 3200,
+      "patrimonio_final": 378518.2,
+      "cagr": 0.164,
+      "queda_maxima": -0.2308,
+      "sharpe": 0.8596,
+      "ang_min": 0.26
+    }
+  ],
+  "numeros_lembrados_do_estudo_perdido": {
+    "Raghee — onda 34 + relógio": "Sharpe 1,55 · CAGR 40% · queda -26% · fora da amostra 2023-26 Sharpe 1,25",
+    "fonte": "README.md e painel.py, escritos antes desta reconstrucao"
+  }
+}

@@ -12,6 +12,7 @@ MINUTO = int(os.getenv("MINUTO_UTC", "5"))
 def rodar():
     print(f"[agendador] {datetime.now(timezone.utc):%Y-%m-%d %H:%M} executando robo.py", flush=True)
     subprocess.run([sys.executable, "/app/robo.py"])
+    subprocess.run([sys.executable, "/app/backup.py"])
 
 
 if os.getenv("RODAR_AO_SUBIR", "1") == "1":
