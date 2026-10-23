@@ -3,6 +3,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir pandas numpy requests
 COPY robo.py agendador.py painel.py sombra.py backup.py /app/
 ENV PASTA_ESTADO=/app/estado
+ENV MODO=observacao
 VOLUME ["/app/estado"]
 EXPOSE 3000
 CMD ["python", "/app/agendador.py"]

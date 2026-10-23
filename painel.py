@@ -179,7 +179,7 @@ pre{{font-size:12px;overflow:auto;max-height:320px;background:var(--bg);padding:
 .tag{{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:var(--linha);color:var(--tx2)}}
 svg text{{fill:var(--tx2);font-size:11px}}
 </style></head><body><main>
-<h1>Robô Trader <span class=tag>{'CONTA DE TESTE' if MODO=='teste' else 'CONTA REAL'}</span></h1>
+<h1>Robô Trader <span class=tag>{'OBSERVAÇÃO' if MODO=='observacao' else 'CONTA DE TESTE' if MODO=='teste' else 'CONTA REAL'}</span></h1>
 <div class=grid>
  <div class=card><h2>Patrimônio</h2><div class=big>{(atual or 0):,.0f} <small>{MOEDA}</small></div><div class=sub>início {(inicial or 0):,.0f}</div></div>
  <div class=card><h2>Resultado desde o início</h2><div class=big style="color:{cor_var}">{var:+.2f}%</div><div class=sub>{len(serie)} dias registrados</div></div>

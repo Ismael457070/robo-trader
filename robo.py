@@ -275,7 +275,9 @@ def main():
         fech = pd.DataFrame({s: ohlc[s].close for s in ohlc}).ffill().tail(max(N, FILTRO_BTC, VOL_DIAS) + 50)
         ohlc = {s: ohlc[s].reindex(fech.index) for s in ohlc}
     else:
-        if not API_KEY or not API_SECRET:
+        # observacao usa so a API publica de precos e nao envia ordem.
+        # teste e real exigem chave porque falam com a conta.
+        if MODO in ("teste", "real") and (not API_KEY or not API_SECRET):
             log.error("faltam BINANCE_API_KEY / BINANCE_API_SECRET"); sys.exit(2)
         dados = Binance(DADOS_URL)
         ohlc = {}
