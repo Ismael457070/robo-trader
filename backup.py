@@ -19,7 +19,7 @@ PASTA = os.getenv("PASTA_ESTADO", "./estado")
 REPO = os.getenv("BACKUP_REPOSITORIO", "Ismael457070/robo-trader-arquivo")
 RAMO = os.getenv("BACKUP_RAMO", "arquivo")
 TOKEN = os.getenv("BACKUP_GITHUB_TOKEN", "")
-ARQUIVOS = ("diario.csv", "pesos_atuais.json", "sombra.json", "sombra.csv", "sombra_hist.csv")
+ARQUIVOS = ("diario.csv", "pesos_atuais.json", "sombra.json", "sombra.csv", "sombra_hist.csv", "trava.json")
 API = "https://api.github.com"
 
 

@@ -38,7 +38,8 @@ VOL_ALVO = float(os.getenv("VOL_ALVO", "0.35"))
 VOL_DIAS = int(os.getenv("VOL_DIAS", "30"))
 BANDA = float(os.getenv("BANDA", "0.10"))
 MAX_BRUTO = float(os.getenv("MAX_BRUTO", "1.0"))
-CAPITAL_MAX = float(os.getenv("CAPITAL_MAX", "0"))  # 0 = usa tudo que tem na conta; >0 limita o valor operado
+CAPITAL_MAX = float(os.getenv("CAPITAL_MAX", "0"))  # real recusa 0; teste pode usar a conta inteira de teste
+QUEDA_PARAR = float(os.getenv("QUEDA_PARAR", "0.15"))  # pausa ordens se a conta cair isto desde o pico
 ORDEM_MINIMA = float(os.getenv("ORDEM_MINIMA", "12"))  # em USDT; abaixo disso nao vale a taxa
 PASTA_ESTADO = os.getenv("PASTA_ESTADO", "./estado")
 CSV_SIMULACAO = os.getenv("CSV_SIMULACAO", "")
@@ -198,6 +199,51 @@ def registrar_diario(linha: dict):
     pd.DataFrame([linha]).to_csv(arq, mode="a", header=not os.path.exists(arq), index=False)
 
 
+ARQ_TRAVA = os.path.join(PASTA_ESTADO, "trava.json")
+
+
+def ler_trava():
+    if os.path.exists(ARQ_TRAVA):
+        return json.load(open(ARQ_TRAVA))
+    return {}
+
+
+def gravar_trava(estado):
+    json.dump(estado, open(ARQ_TRAVA, "w"), indent=1)
+
+
+def exigir_teto():
+    if MODO == "real" and CAPITAL_MAX <= 0:
+        log.error("modo real exige CAPITAL_MAX > 0; sem teto o robo usaria o saldo inteiro")
+        sys.exit(2)
+
+
+def travado(patrimonio):
+    """True quando a conta caiu QUEDA_PARAR desde o pico. Observacao nao mede isso."""
+    estado = ler_trava()
+    if estado.get("pausado"):
+        return True
+    if MODO not in ("teste", "real") or patrimonio != patrimonio:
+        return False
+    pico = max(float(estado.get("pico", patrimonio)), float(patrimonio))
+    queda = float(patrimonio) / pico - 1.0 if pico > 0 else 0.0
+    estado.update({"pico": round(pico, 2), "queda": round(queda, 4), "patrimonio": round(float(patrimonio), 2)})
+    if queda <= -QUEDA_PARAR:
+        estado["pausado"] = True
+        estado["motivo"] = f"queda {queda:.1%} desde o pico {pico:.2f} {MOEDA_CAIXA}"
+        log.error(f"[trava] {estado['motivo']}; zerando e sem novas ordens")
+    gravar_trava(estado)
+    return bool(estado.get("pausado"))
+
+
+def patrimonio_da_conta(precos, simbolos):
+    cli = Binance(ORDENS_URL, API_KEY, API_SECRET)
+    conta = cli.get("/api/v3/account", assinado=True)
+    saldos = {b["asset"]: float(b["free"]) for b in conta["balances"]}
+    return saldos.get(MOEDA_CAIXA, 0.0) + sum(
+        saldos.get(s.replace(MOEDA_CAIXA, ""), 0.0) * precos[s] for s in simbolos)
+
+
 # ---------------- execucao ----------------
 def arredondar_passo(qtd, passo):
     return math.floor(qtd / passo) * passo
@@ -259,7 +305,8 @@ def executar_na_binance(alvo_pesos: pd.Series, precos: dict):
 
 def main():
     hoje = datetime.now(timezone.utc)
-    log.info(f"=== robo iniciado | modo={MODO} | sinal={SINAL} ang_min={ANG_MIN} rompe={ROMPE} | N={N} saida={SAIDA} filtro={FILTRO_BTC} vol_alvo={VOL_ALVO} ===")
+    log.info(f"=== robo iniciado | modo={MODO} | sinal={SINAL} ang_min={ANG_MIN} rompe={ROMPE} | N={N} saida={SAIDA} filtro={FILTRO_BTC} vol_alvo={VOL_ALVO} | teto={CAPITAL_MAX:g} ===")
+    exigir_teto()
 
     if MODO == "simulacao":
         df = pd.read_csv(CSV_SIMULACAO)
@@ -304,13 +351,16 @@ def main():
         log.info("mudancas: " + ", ".join(f"{k} {atual[k]:.2%} -> {alvo[k]:.2%}" for k in alvo.index[mudou]))
 
     patrimonio, executadas = (float("nan"), [])
-    if MODO in ("teste", "real") and mudou.any():
-        patrimonio, executadas = executar_na_binance(alvo, precos)
-    elif MODO in ("teste", "real"):
-        cli = Binance(ORDENS_URL, API_KEY, API_SECRET)
-        conta = cli.get("/api/v3/account", assinado=True)
-        saldos = {b["asset"]: float(b["free"]) for b in conta["balances"]}
-        patrimonio = saldos.get(MOEDA_CAIXA, 0.0) + sum(saldos.get(s.replace(MOEDA_CAIXA, ""), 0.0) * precos[s] for s in alvo.index)
+    if MODO in ("teste", "real"):
+        patrimonio = patrimonio_da_conta(precos, alvo.index)
+        ja_pausado = bool(ler_trava().get("pausado"))
+        if ja_pausado:
+            log.error("[trava] segue pausado; nenhuma ordem")
+        elif travado(patrimonio):
+            log.error("[trava] zerando a carteira")
+            patrimonio, executadas = executar_na_binance(alvo * 0, precos)
+        elif mudou.any():
+            patrimonio, executadas = executar_na_binance(alvo, precos)
 
     try:
         import sombra
